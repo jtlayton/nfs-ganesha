@@ -306,3 +306,7 @@ userid(path, no default)
 
 pool(string, default nfs-ganesha)
     Pool for client info.
+
+nodeid(uint32, range 0 to UINT32_MAX, default UINT32_MAX)
+    The nodeid value for this cluster node. Defaults to UINT32_MAX which is a
+    special value meaning "non-clustered".

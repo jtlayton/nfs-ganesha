@@ -730,6 +730,8 @@ RADOS_KV {}
 
 	pool(string, no default)
 
+	nodeid(uint32, default UINT32_MAX)
+
 RADOS_URLS {}
 --------
 

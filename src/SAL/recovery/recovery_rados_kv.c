@@ -32,6 +32,8 @@ static struct config_item rados_kv_params[] = {
 		       rados_kv_parameter, userid),
 	CONF_ITEM_STR("pool", 1, MAXPATHLEN, DEFAULT_POOL,
 		       rados_kv_parameter, pool),
+	CONF_ITEM_UI32("nodeid", 0, UINT32_MAX, UINT32_MAX,
+			rados_kv_parameter, nodeid),
 	CONFIG_EOL
 };
 
@@ -350,8 +352,8 @@ void rados_kv_init(void)
 	int ret;
 	char host[NI_MAXHOST];
 
-	if (nfs_param.core_param.clustered) {
-		snprintf(host, sizeof(host), "node%d", g_nodeid);
+	if (rados_kv_param.nodeid != UINT32_MAX) {
+		snprintf(host, sizeof(host), "node%d", rados_kv_param.nodeid);
 	} else {
 		ret = gethostname(host, sizeof(host));
 		if (ret) {

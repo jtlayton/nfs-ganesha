@@ -117,8 +117,8 @@ static void rados_ng_init(void)
 	char host[NI_MAXHOST];
 	rados_write_op_t op;
 
-	if (nfs_param.core_param.clustered) {
-		snprintf(host, sizeof(host), "node%d", g_nodeid);
+	if (rados_kv_param.nodeid != UINT32_MAX) {
+		snprintf(host, sizeof(host), "node%d", rados_kv_param.nodeid);
 	} else {
 		ret = gethostname(host, sizeof(host));
 		if (ret) {
