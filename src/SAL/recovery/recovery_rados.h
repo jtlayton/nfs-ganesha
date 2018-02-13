@@ -37,6 +37,8 @@ struct rados_kv_parameter {
 	char *userid;
 	/** Pool for client info */
 	char *pool;
+	/** Node ID for this cluster node */
+	uint32_t nodeid;
 };
 extern struct rados_kv_parameter rados_kv_param;
 
