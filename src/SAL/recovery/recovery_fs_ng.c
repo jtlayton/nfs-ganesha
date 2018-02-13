@@ -377,6 +377,7 @@ static struct nfs4_recovery_backend fs_ng_backend = {
 	.add_clid = fs_add_clid,
 	.rm_clid = fs_rm_clid,
 	.add_revoke_fh = fs_add_revoke_fh,
+	.try_lift_grace = simple_try_lift_grace,
 };
 
 void fs_ng_backend_init(struct nfs4_recovery_backend **backend)

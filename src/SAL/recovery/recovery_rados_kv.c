@@ -601,6 +601,7 @@ struct nfs4_recovery_backend rados_kv_backend = {
 	.add_clid = rados_kv_add_clid,
 	.rm_clid = rados_kv_rm_clid,
 	.add_revoke_fh = rados_kv_add_revoke_fh,
+	.try_lift_grace = simple_try_lift_grace,
 };
 
 void rados_kv_backend_init(struct nfs4_recovery_backend **backend)
