@@ -198,12 +198,31 @@ bool nfs_in_grace(void)
 	return atomic_fetch_time_t(&current_grace);
 }
 
+/**
+ * @brief Determine whether we can lift the grace period
+ *
+ * @retval true if so
+ * @retval false if not
+ *
+ * In a clustered environment, we must take care not to lift the grace period
+ * until it's no longer needed cluster-wide. Try to lift the grace period, and
+ * return true or false depending on whether it succeeded.
+ *
+ * In the case of a single host, we always assume that the grace period can
+ * be lifted.
+ */
+bool simple_try_lift_grace(void)
+{
+	return true;
+}
+
 void nfs_try_lift_grace(void)
 {
 	bool in_grace = true;
 	int32_t rc_count = 0;
 	time_t current = atomic_fetch_time_t(&current_grace);
 
+	/* Already lifted? Just return */
 	if (!current)
 		return;
 
@@ -225,9 +244,11 @@ void nfs_try_lift_grace(void)
 	 * try to do it.
 	 */
 	if (!in_grace) {
-		PTHREAD_MUTEX_lock(&grace_mutex);
-		nfs_lift_grace_locked(current);
-		PTHREAD_MUTEX_unlock(&grace_mutex);
+		if (recovery_backend->try_lift_grace()) {
+			PTHREAD_MUTEX_lock(&grace_mutex);
+			nfs_lift_grace_locked(current);
+			PTHREAD_MUTEX_unlock(&grace_mutex);
+		}
 	}
 }
 
