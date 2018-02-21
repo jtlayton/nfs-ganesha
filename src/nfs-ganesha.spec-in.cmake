@@ -148,7 +148,6 @@ BuildRequires: libntirpc-devel >= @NTIRPC_MIN_VERSION@
 %else
 Requires: libntirpc = @NTIRPC_VERSION_EMBED@
 %endif
-Requires:	nfs-utils
 
 %if ( 0%{?with_rpcbind} )
 %if ( 0%{?fedora} ) || ( 0%{?rhel} && 0%{?rhel} >= 6 ) || ( 0%{?suse_version} )
@@ -164,8 +163,6 @@ BuildRequires:	nfsidmap-devel
 %else
 BuildRequires:	libnfsidmap-devel
 %endif
-%else
-BuildRequires: nfs-utils-lib-devel
 %endif
 
 %if %{with rdma}
