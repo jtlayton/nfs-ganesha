@@ -89,8 +89,8 @@ Requires: openSUSE-release
 @BCOND_RADOS_URLS@ rados_urls
 %global use_rados_urls %{on_off_switch rados_urls}
 
-@BCOND_RPCBIND@ rpcbind
-%global use_rpcbind %{on_off_switch rpcbind}
+%global with_rpcbind 0
+%global use_rpcbind OFF
 
 %global dev_version %{lua: s = string.gsub('@GANESHA_EXTRA_VERSION@', '^%-', ''); s2 = string.gsub(s, '%-', '.'); print((s2 ~= nil and s2 ~= '') and s2 or "0.1") }
 
