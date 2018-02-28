@@ -176,6 +176,33 @@ out:
 	return ret;
 }
 
+int
+rados_grace_epochs(rados_ioctx_t io_ctx, const char *oid,
+			uint64_t *cur, uint64_t *rec)
+{
+	int ret;
+	rados_read_op_t op;
+	size_t len_out = 0;
+	char buf[sizeof(uint64_t) * 2];
+
+	op = rados_create_read_op();
+	rados_read_op_read(op, 0, sizeof(buf), buf, &len_out, NULL);
+	ret = rados_read_op_operate(op, io_ctx, oid, 0);
+	if (ret < 0)
+		goto out;
+
+	ret = -ENOTRECOVERABLE;
+	if (len_out != sizeof(buf))
+		goto out;
+
+	*cur = le64toh(*(uint64_t *)buf);
+	*rec = le64toh(*(uint64_t *)(buf + sizeof(uint64_t)));
+	ret = 0;
+out:
+	rados_release_read_op(op);
+	return ret;
+}
+
 static int
 __rados_grace_start(rados_ioctx_t io_ctx, const char *oid, int nodes,
 			const char **nodeids, uint64_t *pcur, uint64_t *prec,

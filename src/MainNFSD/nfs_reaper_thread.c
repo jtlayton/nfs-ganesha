@@ -203,6 +203,9 @@ static void reaper_run(struct fridgethr_context *ctx)
 
 	SetNameFunction("reaper");
 
+	/* see if we need to start a grace period */
+	nfs_maybe_start_grace();
+
 	/* try to lift the grace period */
 	nfs_try_lift_grace();
 

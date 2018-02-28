@@ -186,6 +186,114 @@ static bool rados_cluster_try_lift_grace(void)
 	return (rec == 0);
 }
 
+struct rados_cluster_kv_pairs {
+	size_t	slots;			/* Current array size */
+	size_t	num;			/* Count of populated elements */
+	char	**keys;			/* Array of key strings */
+	char	**vals;			/* Array of value blobs */
+	size_t	*lens;			/* Array of value lengths */
+};
+
+/*
+ * FIXME: Since each hash tree is protected by its own mutex, we can't ensure
+ *        that we'll get an accurate count before allocating. For now, we just
+ *        have a fixed-size cap of 1024 entries in the db, but we should allow
+ *        there to be an arbitrary number of entries.
+ */
+#define RADOS_KV_STARTING_SLOTS		1024
+
+static void rados_set_client_cb(struct rbt_node *pn, void *arg)
+{
+	struct hash_data *addr = RBT_OPAQ(pn);
+	nfs_client_id_t *clientid = addr->val.addr;
+	struct rados_cluster_kv_pairs *kvp = arg;
+	char ckey[RADOS_KEY_MAX_LEN];
+	char cval[RADOS_VAL_MAX_LEN];
+
+	/* FIXME: resize arrays in this case? */
+	if (kvp->num >= kvp->slots) {
+		LogEvent(COMPONENT_CLIENTID, "too many clients to copy!");
+		return;
+	}
+
+	rados_kv_create_key(clientid, ckey);
+	rados_kv_create_val(clientid, cval);
+
+	kvp->keys[kvp->num] = strdup(ckey);
+	kvp->vals[kvp->num] = strdup(cval);
+	kvp->lens[kvp->num] = strlen(cval);
+	++kvp->num;
+}
+
+/**
+ * @brief Start local grace period if we're in a global one
+ *
+ * In some clustered setups, other machines in the cluster can start a new
+ * grace period. Check for that and enter the grace period if so.
+ */
+static void rados_cluster_maybe_start_grace(void)
+{
+	int ret, i;
+	nfs_grace_start_t gsp = { .event = EVENT_JUST_GRACE };
+	rados_write_op_t wop;
+	uint64_t cur, rec;
+	char *keys[RADOS_KV_STARTING_SLOTS];
+	char *vals[RADOS_KV_STARTING_SLOTS];
+	size_t lens[RADOS_KV_STARTING_SLOTS];
+	struct rados_cluster_kv_pairs kvp = {
+					.slots = RADOS_KV_STARTING_SLOTS,
+					.num = 0,
+					.keys = keys,
+					.vals = vals,
+					.lens = lens };
+
+
+	/* Fix up the strings */
+	ret = rados_grace_epochs(rados_recov_io_ctx, RADOS_GRACE_OID,
+				 &cur, &rec);
+	if (ret) {
+		LogEvent(COMPONENT_CLIENTID, "rados_grace_epochs failed: %d",
+				ret);
+		return;
+	}
+
+	/* No grace period if rec == 0 */
+	if (rec == 0)
+		return;
+
+	/* Start a new grace period */
+	nfs_start_grace(&gsp);
+
+	snprintf(rados_recov_oid, sizeof(rados_recov_oid),
+			"rec-%8.8x:%16.16lx", rados_kv_param.nodeid, cur);
+	snprintf(rados_recov_old_oid, sizeof(rados_recov_old_oid),
+			"rec-%8.8x:%16.16lx", rados_kv_param.nodeid, rec);
+
+	/* Populate key/val/len arrays from confirmed client hash */
+	hashtable_for_each(ht_confirmed_client_id, rados_set_client_cb, &kvp);
+
+	/* Create new write op and package it up for callback */
+	wop = rados_create_write_op();
+	rados_write_op_create(wop, LIBRADOS_CREATE_IDEMPOTENT, NULL);
+	rados_write_op_omap_clear(wop);
+	rados_write_op_omap_set(wop, (char const * const *)keys,
+				     (char const * const *)vals,
+				     (const size_t *)lens, kvp.num);
+	ret = rados_write_op_operate(wop, rados_recov_io_ctx,
+				     rados_recov_oid, NULL, 0);
+	if (ret)
+		LogEvent(COMPONENT_CLIENTID,
+				"rados_write_op_operate failed: %d", ret);
+
+	rados_release_write_op(wop);
+
+	/* Free copied strings */
+	for (i = 0; i < kvp.num; ++i) {
+		free(kvp.keys[i]);
+		free(kvp.vals[i]);
+	}
+}
+
 struct nfs4_recovery_backend rados_cluster_backend = {
 	.recovery_init = rados_cluster_init,
 	.recovery_read_clids = rados_cluster_read_clids,
@@ -193,6 +301,7 @@ struct nfs4_recovery_backend rados_cluster_backend = {
 	.add_clid = rados_kv_add_clid,
 	.rm_clid = rados_kv_rm_clid,
 	.add_revoke_fh = rados_kv_add_revoke_fh,
+	.maybe_start_grace = rados_cluster_maybe_start_grace,
 	.try_lift_grace = rados_cluster_try_lift_grace,
 };
 

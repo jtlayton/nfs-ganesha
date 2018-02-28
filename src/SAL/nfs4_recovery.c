@@ -199,6 +199,21 @@ bool nfs_in_grace(void)
 }
 
 /**
+ * @brief Enter the grace period if another node in the cluster needs it
+ *
+ * Singleton servers generally won't use this operation. Clustered servers
+ * call this function to check whether another node might need a grace period.
+ */
+void nfs_maybe_start_grace(void)
+{
+	if (recovery_backend->maybe_start_grace) {
+		if (nfs_in_grace())
+			return;
+		recovery_backend->maybe_start_grace();
+	}
+}
+
+/**
  * @brief Determine whether we can lift the grace period
  *
  * @retval true if so

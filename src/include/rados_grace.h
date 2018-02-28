@@ -20,6 +20,8 @@
  */
 int rados_grace_create(rados_ioctx_t io_ctx, const char *oid);
 int rados_grace_dump(rados_ioctx_t io_ctx, const char *oid);
+int rados_grace_epochs(rados_ioctx_t io_ctx, const char *oid,
+			uint64_t *cur, uint64_t *rec);
 int rados_grace_start(rados_ioctx_t io_ctx, const char *oid, int nodes,
 			char **nodeids);
 int rados_grace_join(rados_ioctx_t io_ctx, const char *oid, uint32_t nodeid,
