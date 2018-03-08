@@ -262,6 +262,11 @@ int reaper_init(void)
 	return 0;
 }
 
+void reaper_wake(void)
+{
+	fridgethr_wake(reaper_fridge);
+}
+
 int reaper_shutdown(void)
 {
 	int rc = fridgethr_sync_command(reaper_fridge,
