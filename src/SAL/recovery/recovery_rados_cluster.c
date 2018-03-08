@@ -45,6 +45,25 @@
 /* FIXME: Make this configurable -- RADOS_KV param? */
 #define RADOS_GRACE_OID			"grace"
 
+static uint64_t rados_watch_cookie;
+
+static void rados_grace_watchcb(void *arg, uint64_t notify_id, uint64_t handle,
+				uint64_t notifier_id, void *data,
+				size_t data_len)
+{
+	int ret;
+
+	/* ACK it first, so we keep things moving along */
+	ret = rados_notify_ack(rados_recov_io_ctx, RADOS_GRACE_OID, notify_id,
+			       rados_watch_cookie, NULL, 0);
+	if (ret < 0)
+		LogEvent(COMPONENT_CLIENTID,
+			 "rados_notify_ack failed: %d", ret);
+
+	/* Now kick the reaper to check things out */
+	reaper_wake();
+}
+
 static void rados_cluster_init(void)
 {
 	int ret;
@@ -61,6 +80,16 @@ static void rados_cluster_init(void)
 	if (ret < 0 && ret != -EEXIST) {
 		LogEvent(COMPONENT_CLIENTID,
 			"Failed to create grace db: %d", ret);
+		rados_kv_shutdown();
+	}
+
+	/* FIXME: not sure about the 30s timeout value here */
+	ret = rados_watch3(rados_recov_io_ctx, RADOS_GRACE_OID,
+			   &rados_watch_cookie, rados_grace_watchcb, NULL,
+			   30, NULL);
+	if (ret < 0) {
+		LogEvent(COMPONENT_CLIENTID,
+			"Failed to set watch on grace db: %d", ret);
 		rados_kv_shutdown();
 	}
 	return;

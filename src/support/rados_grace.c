@@ -93,6 +93,16 @@
 
 #define MAX_ITEMS			1024
 
+static void rados_grace_notify(rados_ioctx_t io_ctx, const char *oid)
+{
+	static char *buf;
+	static size_t len;
+
+	/* FIXME: we don't really want or need this to be synchronous */
+	rados_notify2(io_ctx, oid, "", 0, 3000, &buf, &len);
+	rados_buffer_free(buf);
+}
+
 int
 rados_grace_create(rados_ioctx_t io_ctx, const char *oid)
 {
@@ -279,6 +289,8 @@ __rados_grace_start(rados_ioctx_t io_ctx, const char *oid, int nodes,
 
 		ret = rados_write_op_operate(wop, io_ctx, oid, NULL, 0);
 		rados_release_write_op(wop);
+		if (ret >= 0)
+			rados_grace_notify(io_ctx, oid);
 	} while (ret == -ERANGE);
 
 	if (!ret) {
@@ -432,6 +444,8 @@ __rados_grace_lift(rados_ioctx_t io_ctx, const char *oid, int nodes,
 
 		ret = rados_write_op_operate(wop, io_ctx, oid, NULL, 0);
 		rados_release_write_op(wop);
+		if (ret >= 0)
+			rados_grace_notify(io_ctx, oid);
 	} while (ret == -ERANGE);
 	if (!ret) {
 		*pcur = cur;
