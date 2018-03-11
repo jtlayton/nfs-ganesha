@@ -206,8 +206,13 @@ static void reaper_run(struct fridgethr_context *ctx)
 	/* see if we need to start a grace period */
 	nfs_maybe_start_grace();
 
-	/* try to lift the grace period */
-	nfs_try_lift_grace();
+	/*
+	 * Try to lift the grace period, unless we're shutting down.
+	 * Ordinarily, we'd take the mutex to check this, but this is just a
+	 * best-effort sort of thing.
+	 */
+	if (!admin_shutdown)
+		nfs_try_lift_grace();
 
 	if (isDebug(COMPONENT_CLIENTID) && ((rst->count > 0) || !rst->logged)) {
 		LogDebug(COMPONENT_CLIENTID,
