@@ -323,6 +323,23 @@ static void rados_cluster_maybe_start_grace(void)
 	}
 }
 
+static void rados_cluster_request_grace(void)
+{
+	int	ret;
+	char	buf[11];
+	char	*nodeids[1];
+
+	if (rados_kv_param.nodeid == UINT32_MAX)
+		return;
+
+	snprintf(buf, sizeof(buf), "%u", rados_kv_param.nodeid);
+	nodeids[0] = buf;
+	ret = rados_grace_start(rados_recov_io_ctx, RADOS_GRACE_OID,
+				1, nodeids);
+	if (ret)
+		LogEvent(COMPONENT_CLIENTID, "Request grace failed: %d", ret);
+}
+
 struct nfs4_recovery_backend rados_cluster_backend = {
 	.recovery_init = rados_cluster_init,
 	.recovery_read_clids = rados_cluster_read_clids,
@@ -331,6 +348,7 @@ struct nfs4_recovery_backend rados_cluster_backend = {
 	.rm_clid = rados_kv_rm_clid,
 	.add_revoke_fh = rados_kv_add_revoke_fh,
 	.maybe_start_grace = rados_cluster_maybe_start_grace,
+	.request_grace = rados_cluster_request_grace,
 	.try_lift_grace = rados_cluster_try_lift_grace,
 };
 

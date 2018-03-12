@@ -213,6 +213,12 @@ void nfs_maybe_start_grace(void)
 	}
 }
 
+void nfs_request_grace(void)
+{
+	if (recovery_backend->request_grace)
+		recovery_backend->request_grace();
+}
+
 /**
  * @brief Determine whether we can lift the grace period
  *
