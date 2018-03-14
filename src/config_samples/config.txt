@@ -539,8 +539,6 @@ CEPH {}
 
 	umask(mode, range 0 to 0777, default 0)
 
-	xattr_access_rights(mode, range 0 to 0777, default 0)
-
 GPFS {}
 -------
 
@@ -553,8 +551,6 @@ GPFS {}
 	umask(mode, range 0 to 0777, default 0)
 
 	auth_xdev_export(bool, default false)
-
-	xattr_access_rights(mode, range 0 to 0777, default 0400)
 
 	Delegations(enum, values [None, read, write, readwrite, r, w, rw],
 		    default read)
@@ -623,8 +619,6 @@ VFS {}
 
 	auth_xdev_export(bool, default false)
 
-	xattr_access_rights(mode, range 0 to 0777, default 0400)
-
 XFS {}
 ------
 
@@ -641,8 +635,6 @@ XFS {}
 	umask(mode, range 0 to 0777, default 0)
 
 	auth_xdev_export(bool, default false)
-
-	xattr_access_rights(mode, range 0 to 0777, default 0400)
 
 PROXY {}
 --------
@@ -665,8 +657,6 @@ PROXY {}
 	umask(mode, range 0 to 0777, default 0)
 
 	auth_xdev_export(bool, default false)
-
-	xattr_access_rights(mode, range 0 to 0777, default 0400)
 
 PROXY { Remote_Server {} }
 --------------------------
