@@ -1,0 +1,14 @@
+# Headless service for stable DNS entries of StatefulSet members.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ganesha
+  labels:
+    app: ganesha
+spec:
+  ports:
+  - name: ganesha
+    port: 2049
+  clusterIP: None
+  selector:
+    app: ganesha

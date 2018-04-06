@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ganesha
+spec:
+  selector:
+    matchLabels:
+      app: ganesha # has to match .spec.template.metadata.labels
+  serviceName: "ganesha"
+  replicas: 3 # be sure to set rados_grace_tool command accordingly below!
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: ganesha # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: ganesha
+        imagePullPolicy: Always
+        image: jlayton/nfs-ganesha:ceph-cluster
+        env:
+        - name: CEPH_MON_ADDR
+          value: 192.168.1.3:40195
+        ports:
+        - containerPort: 2049
+          name: ganesha

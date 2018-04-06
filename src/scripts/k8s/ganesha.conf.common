@@ -1,0 +1,36 @@
+# load this into rados://nfs-ganesha/ganesha.conf
+NFS_CORE_PARAM
+{
+	Enable_NLM = false;
+	Enable_RQUOTA = false;
+	Protocols = 4;
+}
+
+NFSv4
+{
+	Delegations = true;
+	RecoveryBackend = rados_cluster;
+	Minor_Versions = 1, 2;
+}
+
+CACHEINODE {
+	Dir_Chunk = 0;
+	NParts = 1;
+	Cache_Size = 1;
+}
+
+EXPORT
+{
+	Export_ID=100;
+	Protocols = 4;
+	Transports = TCP;
+	Path = /;
+	Pseudo = /cephfs/;
+	Access_Type = RW;
+	Attr_Expiration_Time = 0;
+	Delegations = R;
+	Squash = No_root_squash;
+	FSAL {
+		Name = CEPH;
+	}
+}
