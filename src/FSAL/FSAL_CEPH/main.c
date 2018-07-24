@@ -249,6 +249,10 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 	int rc;
 	/* Return code from Ceph calls */
 	int ceph_status;
+#ifdef USE_FSAL_CEPH_RECLAIM_RESET
+	long			maxlen = sysconf(_SC_HOST_NAME_MAX);
+	char			*nodeid;
+#endif
 
 	fsal_export_init(&export->export);
 	export_ops_init(&export->export.exp_ops);
@@ -311,6 +315,41 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 			op_ctx->ctx_export->fullpath, ceph_status);
 		goto error;
 	}
+
+	ceph_status = ceph_init(export->cmount);
+	if (ceph_status != 0) {
+		status.major = ERR_FSAL_SERVERFAULT;
+		LogCrit(COMPONENT_FSAL,
+			"Unable to init Ceph handle for %s.",
+			op_ctx->ctx_export->fullpath);
+		goto error;
+	}
+
+#ifdef USE_FSAL_CEPH_RECLAIM_RESET
+	/*
+	 * Set long timeout for the session to ensure that MDS doesn't lose
+	 * state before server can come back and do recovery.
+	 */
+	ceph_set_session_timeout(export->cmount, 300);
+
+	nodeid = gsh_malloc(maxlen);
+	rc = gethostname(nodeid, maxlen);
+	if (rc) {
+		status.major = ERR_FSAL_SERVERFAULT;
+		LogEvent(COMPONENT_FSAL, "gethostname failed: %d", errno);
+		free(nodeid);
+		goto error;
+	}
+
+	ceph_status = ceph_start_reclaim(export->cmount, nodeid,
+						CEPH_RECLAIM_RESET);
+	if (ceph_status)
+		LogEvent(COMPONENT_FSAL, "start_reclaim failed: %d",
+				ceph_status);
+	ceph_finish_reclaim(export->cmount);
+	ceph_set_uuid(export->cmount, nodeid);
+	free(nodeid);
+#endif /* USE_FSAL_CEPH_RECLAIM_RESET */
 
 	ceph_status = ceph_mount(export->cmount, op_ctx->ctx_export->fullpath);
 	if (ceph_status != 0) {
