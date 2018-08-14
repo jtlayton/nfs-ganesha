@@ -312,6 +312,25 @@ bool nfs_grace_is_member(void)
 	return true;
 }
 
+/**
+ * @brief Get a list of public replica addresses for the cluster
+ *
+ * Calls into the recovery backend's get_replicas op to get a list of
+ * addresses that carry the same set of exports.
+ *
+ * On success, fills out the paddr array and returns the number of elements
+ * in it. On failure it returns 0 and paddr is set to NULL.
+ *
+ * The caller should free the returned array with nfs_free_replicas.
+ */
+int nfs_get_replicas(utf8string **paddr)
+{
+	if (recovery_backend->get_replicas)
+		return recovery_backend->get_replicas(paddr);
+	*paddr = NULL;
+	return 0;
+}
+
 void nfs_try_lift_grace(void)
 {
 	bool in_grace = true;
