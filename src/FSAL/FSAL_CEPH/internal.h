@@ -141,7 +141,8 @@ struct ds {
 
 #endif				/* CEPH_PNFS */
 
-#define CEPH_SUPPORTED_ATTRS ((const attrmask_t) (ATTRS_POSIX))
+#define CEPH_SUPPORTED_ATTRS ((const attrmask_t) (ATTRS_POSIX |		\
+						  ATTR4_FS_LOCATIONS))
 
 #define CEPH_SETTABLE_ATTRIBUTES ((const attrmask_t) (			\
 	ATTR_MODE  | ATTR_OWNER | ATTR_GROUP | ATTR_ATIME	 |	\

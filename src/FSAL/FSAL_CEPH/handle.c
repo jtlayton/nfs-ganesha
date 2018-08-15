@@ -44,6 +44,7 @@
 #include "internal.h"
 #include "nfs_exports.h"
 #include "sal_data.h"
+#include "sal_functions.h"
 #include "statx_compat.h"
 #include "linux/falloc.h"
 
@@ -587,6 +588,16 @@ static fsal_status_t ceph_fsal_getattrs(struct fsal_obj_handle *handle_pub,
 	}
 
 	ceph2fsal_attributes(&stx, attrs);
+
+	if (FSAL_TEST_MASK(attrs->request_mask, ATTR4_FS_LOCATIONS)) {
+		nfs4_fs_locations_release(attrs->fs_locations);
+		attrs->fs_locations =
+			nfs4_fs_locations_new(op_ctx->ctx_export->pseudopath,
+					op_ctx->ctx_export->pseudopath, 0);
+		attrs->fs_locations->nservers =
+			nfs_get_replicas(&attrs->fs_locations->server);
+		FSAL_SET_MASK(attrs->valid_mask, ATTR4_FS_LOCATIONS);
+	}
 
 	return fsalstat(ERR_FSAL_NO_ERROR, 0);
 }
