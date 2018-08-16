@@ -1700,6 +1700,9 @@ static struct config_item fsal_params[] = {
 		_struct_, options, options_set),			\
 	CONF_ITEM_BOOLBIT_SET("Disable_ACL",				\
 		false, EXPORT_OPTION_DISABLE_ACL,			\
+		_struct_, options, options_set),			\
+	CONF_ITEM_BOOLBIT_SET("Moved",					\
+		false, EXPORT_OPTION_MOVED_SET,				\
 		_struct_, options, options_set)
 
 /**

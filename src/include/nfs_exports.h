@@ -111,6 +111,7 @@ typedef struct exportlist_client_entry__ {
 						 specified */
 #define EXPORT_OPTION_PREFWRITE_SET 0x00000080 /* Set if PrefWrite was
 						  specified */
+#define EXPORT_OPTION_MOVED_SET 0x00000100 /* Set if export is now a junction */
 
 /* Constants for export permissions masks */
 #define EXPORT_OPTION_ROOT 0	/*< Allow root access as root uid */
