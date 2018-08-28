@@ -389,6 +389,76 @@ static bool rados_cluster_is_member(void)
 	return true;
 }
 
+/* OID of clustermap object */
+#define CLUSTERMAP_OID		"clustermap"
+
+/*
+ * The Linux client currently only allows a max of 10 servers. Let's generously
+ * exceed it by a little.
+ */
+#define MAX_CLUSTER_MEMBERS	16
+static int rados_cluster_get_replicas(utf8string **paddr)
+{
+	int ret;
+	unsigned int count = 0;
+	rados_omap_iter_t iter = NULL;
+	rados_read_op_t op;
+	unsigned char more = '\0';
+	utf8string *addr = NULL;
+
+	op = rados_create_read_op();
+	rados_read_op_omap_get_vals2(op, "", "", MAX_CLUSTER_MEMBERS, &iter,
+				     &more, NULL);
+	ret = rados_read_op_operate(op, rados_recov_io_ctx, CLUSTERMAP_OID, 0);
+	if (ret < 0) {
+		LogEvent(COMPONENT_CLIENTID, "RADOS read op failed: %d", ret);
+		goto out;
+	}
+
+	ret = 0;
+	count = rados_omap_iter_size(iter);
+	if (!count)
+		goto out;
+
+	addr = gsh_calloc(count, sizeof(*addr));
+	for (;;) {
+		char *key_out = NULL;
+		char *val_out = NULL;
+		size_t len_out = 0;
+
+		rados_omap_get_next(iter, &key_out, &val_out, &len_out);
+		if (key_out == NULL || val_out == NULL)
+			break;
+		if (unlikely(ret >= count)) {
+			LogWarn(COMPONENT_CLIENTID,
+				"Array overrun averted: ret=%d count=%u",
+				ret, count);
+			break;
+		}
+
+		/*
+		 * RFC5661, section 11.9
+		 *
+		 * A zero-length string SHOULD be used to indicate the current
+		 * address being used for the RPC call.
+		 *
+		 * If the key and nodeid match, then it's the same server, and
+		 * we can just send an empty string.
+		 */
+		if (strcmp(key_out, nodeid)) {
+			addr[ret].utf8string_val = gsh_memdup(val_out, len_out);
+			addr[ret].utf8string_len = len_out;
+		}
+		++ret;
+	}
+out:
+	rados_omap_get_end(iter);
+	rados_release_read_op(op);
+	*paddr = addr;
+	return ret;
+}
+#undef MAX_CLUSTER_MEMBERS
+
 struct nfs4_recovery_backend rados_cluster_backend = {
 	.recovery_init = rados_cluster_init,
 	.recovery_shutdown = rados_cluster_shutdown,
@@ -402,6 +472,7 @@ struct nfs4_recovery_backend rados_cluster_backend = {
 	.set_enforcing = rados_cluster_set_enforcing,
 	.grace_enforcing = rados_cluster_grace_enforcing,
 	.is_member = rados_cluster_is_member,
+	.get_replicas = rados_cluster_get_replicas,
 };
 
 void rados_cluster_backend_init(struct nfs4_recovery_backend **backend)
