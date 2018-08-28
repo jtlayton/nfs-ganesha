@@ -2449,6 +2449,12 @@ static fsal_status_t ceph_fsal_fallocate(struct fsal_obj_handle *obj_hdl,
 }
 #endif
 
+static bool ceph_fsal_is_referral(struct fsal_obj_handle *obj_hdl,
+				  struct attrlist *attrs, bool cache_attrs)
+{
+	return op_ctx_export_has_option(EXPORT_OPTION_MOVED_SET);
+}
+
 /**
  * @brief Override functions in ops vector
  *
@@ -2497,4 +2503,5 @@ void handle_ops_init(struct fsal_obj_ops *ops)
 #ifdef USE_CEPH_LL_FALLOCATE
 	ops->fallocate = ceph_fsal_fallocate;
 #endif
+	ops->is_referral = ceph_fsal_is_referral;
 }
