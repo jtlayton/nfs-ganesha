@@ -81,6 +81,8 @@ int nfs4_op_lockt(struct nfs_argop4 *op, compound_data_t *data,
 	fsal_lock_param_t conflict_desc;
 	/* return code from id confirm calls */
 	int rc;
+	/* release grace status reference? */
+	bool have_grace_ref = false;
 	/* stateid if available matching owner and entry */
 	state_t *state;
 	uint64_t maxfilesize =
@@ -104,10 +106,11 @@ int nfs4_op_lockt(struct nfs_argop4 *op, compound_data_t *data,
 		return res_LOCKT4->status;
 	}
 
-	if (nfs_in_grace()) {
+	if (!nfs_get_grace_status(false)) {
 		res_LOCKT4->status = NFS4ERR_GRACE;
 		return res_LOCKT4->status;
 	}
+	have_grace_ref = true;
 
 	/* Convert lock parameters to internal types */
 	switch (arg_LOCKT4->locktype) {
@@ -258,6 +261,8 @@ int nfs4_op_lockt(struct nfs_argop4 *op, compound_data_t *data,
 		dec_state_t_ref(state);
 
  out:
+	if (have_grace_ref)
+		nfs_put_grace_status();
 
 	/* Update the lease before exit */
 	if (data->minorversion == 0) {
