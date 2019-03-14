@@ -108,31 +108,16 @@ void rados_kv_create_key(nfs_client_id_t *clientid, char *key)
 		 (uint64_t)clientid->cid_clientid);
 }
 
+/* This assumes that "val" is at least RADOS_VAL_MAX_LEN */
 void rados_kv_create_val(nfs_client_id_t *clientid, char *val)
 {
 	char *src = clientid->cid_client_record->cr_client_val;
 	int src_len = clientid->cid_client_record->cr_client_val_len;
-	const char *str_client_addr = "(unknown)";
-	char cidstr[PATH_MAX] = { 0, };
-	struct display_buffer dspbuf = {sizeof(cidstr), cidstr, cidstr};
-	char cidstr_len[20];
-	int total_len;
+	struct display_buffer dspbuf = {RADOS_VAL_MAX_LEN, val, val};
 	int ret;
 
-	/* get the caller's IP addr */
-	if (clientid->gsh_client != NULL)
-		str_client_addr = clientid->gsh_client->hostaddr_str;
-
-	ret = convert_opaque_val(&dspbuf, src, src_len, PATH_MAX);
+	ret = convert_opaque_val(&dspbuf, src, src_len, RADOS_VAL_MAX_LEN);
 	assert(ret > 0);
-
-	snprintf(cidstr_len, sizeof(cidstr_len), "%zd", strlen(cidstr));
-	total_len = strlen(cidstr) + strlen(str_client_addr) + 5 +
-		    strlen(cidstr_len);
-
-	/* hold both long form clientid and IP */
-	snprintf(val, total_len, "%s-(%s:%s)",
-		 str_client_addr, cidstr_len, cidstr);
 
 	LogDebug(COMPONENT_CLIENTID, "Created client name [%s]", val);
 }

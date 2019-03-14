@@ -548,20 +548,20 @@ void nfs4_rm_clid(nfs_client_id_t *clientid)
 	PTHREAD_MUTEX_unlock(&clientid->cid_mutex);
 }
 
-static bool check_clid(nfs_client_id_t *clientid, clid_entry_t *clid_ent)
+static void gen_legacy_name(nfs_client_id_t *clientid, char *val)
 {
-	bool ret = false;
+	const char *str_client_addr = "(unknown)";
 
+	/* get the caller's IP addr */
+	if (clientid->gsh_client != NULL)
+		str_client_addr = clientid->gsh_client->hostaddr_str;
 
-	LogDebug(COMPONENT_CLIENTID, "compare %s to %s",
-		 clientid->cid_recov_tag, clid_ent->cl_name);
+	/* hold both long form clientid and IP */
+	snprintf(val, PATH_MAX, "%s-(%zd:%s)",
+		 str_client_addr, strlen(clientid->cid_recov_tag),
+		 clientid->cid_recov_tag);
 
-	if (clientid->cid_recov_tag &&
-	    !strncmp(clientid->cid_recov_tag,
-		     clid_ent->cl_name, PATH_MAX))
-		ret = true;
-
-	return ret;
+	LogDebug(COMPONENT_CLIENTID, "Created client name [%s]", val);
 }
 
 /**
@@ -576,12 +576,15 @@ void  nfs4_chk_clid_impl(nfs_client_id_t *clientid, clid_entry_t **clid_ent_arg)
 	struct glist_head *node;
 	clid_entry_t *clid_ent;
 	*clid_ent_arg = NULL;
+	char legacy_name[PATH_MAX];
 
-	LogDebug(COMPONENT_CLIENTID, "chk for %lu",
-		 clientid->cid_clientid);
+	LogDebug(COMPONENT_CLIENTID, "chk for %lu", clientid->cid_clientid);
 
-	/* If there were no clients at time of restart, we're done */
-	if (clid_count == 0)
+	/*
+	 * If there were no clients at time of restart, or we don't have a
+	 * recovery tag, then we're done
+	 */
+	if (clid_count == 0 || !clientid->cid_recov_tag)
 		return;
 
 	/*
@@ -591,7 +594,31 @@ void  nfs4_chk_clid_impl(nfs_client_id_t *clientid, clid_entry_t **clid_ent_arg)
 	PTHREAD_MUTEX_lock(&clientid->cid_mutex);
 	glist_for_each(node, &clid_list) {
 		clid_ent = glist_entry(node, clid_entry_t, cl_list);
-		if (check_clid(clientid, clid_ent)) {
+		if (!strcmp(clientid->cid_recov_tag, clid_ent->cl_name)) {
+			if (isDebug(COMPONENT_CLIENTID)) {
+				char str[LOG_BUFF_LEN] = "\0";
+				struct display_buffer dspbuf = {
+					sizeof(str), str, str};
+
+				display_client_id_rec(&dspbuf, clientid);
+
+				LogFullDebug(COMPONENT_CLIENTID,
+					     "Allowed to reclaim ClientId %s",
+					     str);
+			}
+			clientid->cid_allow_reclaim = true;
+			*clid_ent_arg = clid_ent;
+			goto out;
+		}
+	}
+	/*
+	 * generate legacy cid_recov_tag for this client and see if it matches
+	 * any of the entries.
+	 */
+	gen_legacy_name(clientid, legacy_name);
+	glist_for_each(node, &clid_list) {
+		clid_ent = glist_entry(node, clid_entry_t, cl_list);
+		if (!strcmp(legacy_name, clid_ent->cl_name)) {
 			if (isDebug(COMPONENT_CLIENTID)) {
 				char str[LOG_BUFF_LEN] = "\0";
 				struct display_buffer dspbuf = {
@@ -608,6 +635,7 @@ void  nfs4_chk_clid_impl(nfs_client_id_t *clientid, clid_entry_t **clid_ent_arg)
 			break;
 		}
 	}
+out:
 	PTHREAD_MUTEX_unlock(&clientid->cid_mutex);
 }
 
