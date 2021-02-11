@@ -3479,6 +3479,8 @@ _mdcache_kill_entry(mdcache_entry_t *entry,
  */
 void mdc_update_attr_cache(mdcache_entry_t *entry, struct fsal_attrlist *attrs)
 {
+	attrmask_t saved_valid = attrs->valid_mask;
+
 	if (entry->attrs.acl != NULL) {
 		/* We used to have an ACL... */
 		if (attrs->acl != NULL) {
@@ -3559,6 +3561,12 @@ void mdc_update_attr_cache(mdcache_entry_t *entry, struct fsal_attrlist *attrs)
 	 * FSAL provided one for us gratis.
 	 */
 	mdc_fixup_md(entry, &entry->attrs);
+
+	if ((attrs->valid_mask & ATTR4_SEC_LABEL) !=
+	     (saved_valid & ATTR4_SEC_LABEL))
+		LogWarn(COMPONENT_FSAL,
+			 "%s: valid_mask changed. was 0x%lx , now 0x%lx",
+			 __func__, saved_valid, attrs->valid_mask);
 }
 
 /** @} */
