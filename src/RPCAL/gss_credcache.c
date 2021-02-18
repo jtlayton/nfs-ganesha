@@ -193,7 +193,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	memset(&my_creds, 0, sizeof(my_creds));
 
 	if (ple->ccname && ple->endtime > now && !nocache) {
-		printerr(2, "INFO: Credentials in CC '%s' are good until %d\n",
+		printerr(2, "INFO: Credentials in CC '%s' are good until %d",
 			 ple->ccname, ple->endtime);
 		code = 0;
 		goto out;
@@ -202,7 +202,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	code = krb5_kt_get_name(context, kt, kt_name, BUFSIZ);
 	if (code != 0) {
 		printerr(0,
-			 "ERROR: Unable to get keytab name in gssd_get_single_krb5_cred\n");
+			 "ERROR: Unable to get keytab name in %s", __func__);
 		goto out;
 	}
 
@@ -213,15 +213,15 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	code = krb5_get_init_creds_opt_alloc(context, &init_opts);
 	if (code) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s allocating gic options\n", k5err);
+		printerr(0, "ERROR: %s allocating gic options", k5err);
 		goto out;
 	}
 	if (krb5_get_init_creds_opt_set_addressless(context, init_opts, 1))
 		printerr(1,
-			 "WARNING: Unable to set option for addressless tickets.  May have problems behind a NAT.\n");
+			 "WARNING: Unable to set option for addressless tickets.  May have problems behind a NAT.");
 #ifdef TEST_SHORT_LIFETIME
 	/* set a short lifetime (for debugging only!) */
-	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
+	printerr(0, "WARNING: Using (debug) short machine cred lifetime!");
 	krb5_get_init_creds_opt_set_tkt_life(init_opts, 5 * 60);
 #endif
 	opts = init_opts;
@@ -232,7 +232,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	krb5_get_init_creds_opt_set_address_list(&options, NULL);
 #ifdef TEST_SHORT_LIFETIME
 	/* set a short lifetime (for debugging only!) */
-	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
+	printerr(0, "WARNING: Using (debug) short machine cred lifetime!");
 	krb5_get_init_creds_opt_set_tkt_life(&options, 5 * 60);
 #endif
 	opts = &options;
@@ -244,7 +244,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
 		printerr(1,
-			 "WARNING: %s while getting initial ticket for principal '%s' using keytab '%s'\n",
+			 "WARNING: %s while getting initial ticket for principal '%s' using keytab '%s'",
 			 k5err,
 			 pname ? pname : "<unparsable>", kt_name);
 		goto out;
@@ -277,7 +277,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	code = krb5_cc_resolve(context, cc_name, &ccache);
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while opening credential cache '%s'\n",
+		printerr(0, "ERROR: %s while opening credential cache '%s'",
 			 k5err, cc_name);
 		goto out;
 	}
@@ -285,14 +285,14 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
 		printerr(0,
-			 "ERROR: %s while initializing credential cache '%s'\n",
+			 "ERROR: %s while initializing credential cache '%s'",
 			 k5err, cc_name);
 		goto out;
 	}
 	code = krb5_cc_store_cred(context, ccache, &my_creds);
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while storing credentials in '%s'\n",
+		printerr(0, "ERROR: %s while storing credentials in '%s'",
 			 k5err, cc_name);
 		goto out;
 	}
@@ -300,7 +300,7 @@ static int gssd_get_single_krb5_cred(krb5_context context, krb5_keytab kt,
 	gssd_set_krb5_ccache_name(cc_name);
 	code = 0;
 	printerr(2,
-		 "Successfully obtained machine credentials for principal '%s' stored in ccache '%s'\n",
+		 "Successfully obtained machine credentials for principal '%s' stored in ccache '%s'",
 		 pname, cc_name);
  out:
 #if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
@@ -325,12 +325,12 @@ static void gssd_set_krb5_ccache_name(char *ccname)
 #ifdef USE_GSS_KRB5_CCACHE_NAME
 	u_int maj_stat, min_stat;
 
-	printerr(2, "using gss_krb5_ccache_name to select krb5 ccache %s\n",
+	printerr(2, "using gss_krb5_ccache_name to select krb5 ccache %s",
 		 ccname);
 	maj_stat = gss_krb5_ccache_name(&min_stat, ccname, NULL);
 	if (maj_stat != GSS_S_COMPLETE) {
 		printerr(0,
-			 "WARNING: gss_krb5_ccache_name with name '%s' failed (%s)\n",
+			 "WARNING: gss_krb5_ccache_name with name '%s' failed (%s)",
 			 ccname, error_message(min_stat));
 	}
 #else
@@ -340,7 +340,7 @@ static void gssd_set_krb5_ccache_name(char *ccname)
 	 * function above for which there is no generic gssapi
 	 * equivalent.)
 	 */
-	printerr(2, "using environment variable to select krb5 ccache %s\n",
+	printerr(2, "using environment variable to select krb5 ccache %s",
 		 ccname);
 	setenv("KRB5CCNAME", ccname, 1);
 #endif
@@ -458,7 +458,7 @@ static int get_full_hostname(const char *inhost, char *outhost, int outhostlen)
 			nfs_param.core_param.enable_AUTHSTATS);
 
 	if (retval) {
-		printerr(1, "%s while getting full hostname for '%s'\n",
+		printerr(1, "%s while getting full hostname for '%s'",
 			 gai_strerror(retval), inhost);
 		return retval;
 	}
@@ -471,7 +471,7 @@ static int get_full_hostname(const char *inhost, char *outhost, int outhostlen)
 	for (c = outhost; *c != '\0'; c++)
 		*c = tolower(*c);
 
-	printerr(3, "Full hostname for '%s' is '%s'\n", inhost, outhost);
+	printerr(3, "Full hostname for '%s' is '%s'", inhost, outhost);
 	retval = 0;
 
  out:
@@ -560,7 +560,7 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 	code = krb5_kt_get_name(context, kt, kt_name, BUFSIZ);
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s attempting to get keytab name\n",
+		printerr(0, "ERROR: %s attempting to get keytab name",
 			 k5err);
 		gsh_free(k5err);
 		retval = code;
@@ -570,7 +570,7 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
 		printerr(0,
-			 "ERROR: %s while beginning keytab scan for keytab '%s'\n",
+			 "ERROR: %s while beginning keytab scan for keytab '%s'",
 			 k5err, kt_name);
 		gsh_free(k5err);
 		retval = code;
@@ -582,13 +582,13 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 		if (code != 0) {
 			k5err = gssd_k5_err_msg(context, code);
 			printerr(0,
-				 "WARNING: Skipping keytab entry because we failed to unparse principal name: %s\n",
+				 "WARNING: Skipping keytab entry because we failed to unparse principal name: %s",
 				 k5err);
 			k5_free_kt_entry(context, kte);
 			gsh_free(k5err);
 			continue;
 		}
-		printerr(4, "Processing keytab entry for principal '%s'\n",
+		printerr(4, "Processing keytab entry for principal '%s'",
 			 pname);
 		/* Use the first matching keytab entry found */
 #ifdef HAVE_KRB5
@@ -600,7 +600,7 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 					    service);
 #endif
 		if (status) {
-			printerr(4, "We WILL use this entry (%s)\n", pname);
+			printerr(4, "We WILL use this entry (%s)", pname);
 			ple = get_ple_by_princ(context, kte->principal);
 			/*
 			 * Return, don't free, keytab entry if
@@ -620,7 +620,7 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 			k5_free_unparsed_name(context, pname);
 			break;
 		} else {
-			printerr(4, "We will NOT use this entry (%s)\n", pname);
+			printerr(4, "We will NOT use this entry (%s)", pname);
 		}
 		k5_free_unparsed_name(context, pname);
 		k5_free_kt_entry(context, kte);
@@ -630,7 +630,7 @@ static int gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
 		printerr(0,
-			 "WARNING: %s while ending keytab scan for keytab '%s'\n",
+			 "WARNING: %s while ending keytab scan for keytab '%s'",
 			 k5err, kt_name);
 		gsh_free(k5err);
 	}
@@ -671,7 +671,7 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 			nfs_param.core_param.enable_AUTHSTATS);
 	if (retval) {
 		k5err = gssd_k5_err_msg(context, retval);
-		printerr(1, "%s while getting local hostname\n", k5err);
+		printerr(1, "%s while getting local hostname", k5err);
 		gsh_free(k5err);
 		goto out;
 	}
@@ -691,7 +691,7 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 	if (code) {
 		retval = code;
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(1, "%s while getting default realm name\n", k5err);
+		printerr(1, "%s while getting default realm name", k5err);
 		gsh_free(k5err);
 		goto out;
 	}
@@ -705,7 +705,7 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 	code = krb5_get_host_realm(context, targethostname, &realmnames);
 	if (code) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while getting realm(s) for host '%s'\n",
+		printerr(0, "ERROR: %s while getting realm(s) for host '%s'",
 			 k5err, targethostname);
 		gsh_free(k5err);
 		retval = code;
@@ -766,7 +766,7 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 			if (code) {
 				k5err = gssd_k5_err_msg(context, code);
 				printerr(1,
-					 "%s while building principal for '%s'\n",
+					 "%s while building principal for '%s'",
 					 k5err, spn);
 				gsh_free(k5err);
 				continue;
@@ -776,12 +776,12 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 			if (code) {
 				k5err = gssd_k5_err_msg(context, code);
 				printerr(3,
-					 "%s while getting keytab entry for '%s'\n",
+					 "%s while getting keytab entry for '%s'",
 					 k5err, spn);
 				gsh_free(k5err);
 			} else {
 				printerr(3,
-					 "Success getting keytab entry for '%s'\n",
+					 "Success getting keytab entry for '%s'",
 					 spn);
 				retval = 0;
 				goto out;
@@ -802,7 +802,7 @@ static int find_keytab_entry(krb5_context context, krb5_keytab kt,
 						    svcnames[j], &found, kte);
 			if (!code && found) {
 				printerr(3,
-					 "Success getting keytab entry for %s/*@%s\n",
+					 "Success getting keytab entry for %s/*@%s",
 					 svcnames[j], realm);
 				retval = 0;
 				goto out;
@@ -881,7 +881,7 @@ int gssd_refresh_krb5_machine_credential(char *hostname,
 	code = krb5_init_context(&context);
 	if (code) {
 		k5err = gssd_k5_err_msg(NULL, code);
-		printerr(0, "ERROR: %s: %s while initializing krb5 context\n",
+		printerr(0, "ERROR: %s: %s while initializing krb5 context",
 			 __func__, k5err);
 		retval = code;
 		gsh_free(k5err);
@@ -891,7 +891,7 @@ int gssd_refresh_krb5_machine_credential(char *hostname,
 	code = krb5_kt_resolve(context, keytabfile, &kt);
 	if (code != 0) {
 		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s: %s while resolving keytab '%s'\n",
+		printerr(0, "ERROR: %s: %s while resolving keytab '%s'",
 			 __func__, k5err, keytabfile);
 		gsh_free(k5err);
 		goto out;
@@ -904,7 +904,7 @@ int gssd_refresh_krb5_machine_credential(char *hostname,
 					 svcnames);
 		if (code) {
 			printerr(0,
-				 "ERROR: %s: no usable keytab entry found in keytab %s for connection with host %s\n",
+				 "ERROR: %s: no usable keytab entry found in keytab %s for connection with host %s",
 				 __func__, keytabfile, hostname);
 			retval = code;
 			goto out;
@@ -920,7 +920,7 @@ int gssd_refresh_krb5_machine_credential(char *hostname,
 				pname = NULL;
 			}
 			printerr(0,
-				 "ERROR: %s: Could not locate or create ple struct for principal %s for connection with host %s\n",
+				 "ERROR: %s: Could not locate or create ple struct for principal %s for connection with host %s",
 				 __func__,
 				 pname ? pname : "<unparsable>", hostname);
 			if (pname)
@@ -946,13 +946,13 @@ int gssd_check_mechs(void)
 	maj_stat = gss_indicate_mechs(&min_stat, &supported_mechs);
 	if (maj_stat != GSS_S_COMPLETE) {
 		printerr(0,
-			 "Unable to obtain list of supported mechanisms. Check that gss library is properly configured.\n");
+			 "Unable to obtain list of supported mechanisms. Check that gss library is properly configured.");
 		goto out;
 	}
 	if (supported_mechs == GSS_C_NO_OID_SET ||
 	    supported_mechs->count == 0) {
 		printerr(0,
-			 "Unable to obtain list of supported mechanisms. Check that gss library is properly configured.\n");
+			 "Unable to obtain list of supported mechanisms. Check that gss library is properly configured.");
 		goto out;
 	}
 	maj_stat = gss_release_oid_set(&min_stat, &supported_mechs);
