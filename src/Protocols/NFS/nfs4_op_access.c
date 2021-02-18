@@ -65,9 +65,12 @@ enum nfs_req_result nfs4_op_access(struct nfs_argop4 *op, compound_data_t *data,
 	ACCESS4args * const arg_ACCESS4 = &op->nfs_argop4_u.opaccess;
 	ACCESS4res * const res_ACCESS4 = &resp->nfs_resop4_u.opaccess;
 	fsal_status_t status;
+	uint32_t xattr_access = (ACCESS4_XAREAD | ACCESS4_XAWRITE |
+			       ACCESS4_XALIST);
 	uint32_t max_access = (ACCESS4_READ | ACCESS4_LOOKUP |
 			       ACCESS4_MODIFY | ACCESS4_EXTEND |
-			       ACCESS4_DELETE | ACCESS4_EXECUTE);
+			       ACCESS4_DELETE | ACCESS4_EXECUTE |
+			       xattr_access);
 
 	/* initialize output */
 	res_ACCESS4->ACCESS4res_u.resok4.supported = 0;
@@ -98,6 +101,22 @@ enum nfs_req_result nfs4_op_access(struct nfs_argop4 *op, compound_data_t *data,
 	else
 		res_ACCESS4->status = nfs4_Errno_status(status);
 
+	if (!(arg_ACCESS4->access & xattr_access))
+		goto out;
+
+	res_ACCESS4->ACCESS4res_u.resok4.supported |= xattr_access;
+
+	/*
+	 * Assume that if we have read permissions on the inode that
+	 * we can fetch and list xattrs. If we have write permissions,
+	 * we can change xattrs.
+	 */
+	if (res_ACCESS4->ACCESS4res_u.resok4.access & ACCESS4_READ)
+		res_ACCESS4->ACCESS4res_u.resok4.access |= ACCESS4_XAREAD |
+							   ACCESS4_XALIST;
+	if (res_ACCESS4->ACCESS4res_u.resok4.access & ACCESS4_MODIFY)
+		res_ACCESS4->ACCESS4res_u.resok4.access |= ACCESS4_XAWRITE;
+out:
 	return nfsstat4_to_nfs_req_result(res_ACCESS4->status);
 }				/* nfs4_op_access */
 
